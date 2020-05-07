@@ -1,5 +1,7 @@
 const usernameInput = document.getElementById('username');
+const codeInput = document.getElementById('code');
 const button = document.getElementById('join_leave');
+const verifyForm = document.getElementById('verify');
 const container = document.getElementById('container');
 const count = document.getElementById('count');
 var connected = false;
@@ -22,28 +24,57 @@ function connectButtonHandler(event) {
         }
         button.disabled = true;
         button.innerHTML = 'Connecting...';
+
         connect(username).then(() => {
-            button.innerHTML = 'Leave call';
-            button.disabled = false;
+            verifyForm.style.display = "";
         }).catch(() => {
-            alert('Connection failed. Is the backend running?');
+            alert("Error - invalid or unknown user");
             button.innerHTML = 'Join call';
             button.disabled = false;
         });
-    }
-    else {
+    } else {
         disconnect();
         button.innerHTML = 'Join call';
         connected = false;
     }
+}
+
+function verifyButtonHandler(event) {
+    event.preventDefault();
+    var code = codeInput.value;
+    verify(code).then(() => {
+        verifyForm.style.display = "none";
+        button.innerHTML = 'Leave call';
+        button.disabled = false;
+    }).catch(() => {
+        alert("Error - invalid code");
+        button.innerHTML = 'Join call';
+        button.disabled = false;
+    });
 };
 
 function connect(username) {
     var promise = new Promise((resolve, reject) => {
-        // get a token from the back end
+        // start the phone verification process
         fetch('/login', {
             method: 'POST',
             body: JSON.stringify({'username': username})
+        }).then(res => res.json()).then(data => {
+            count.innerHTML = `Sent code to phone number ${data.phone}. Enter the code to verify.`;
+            resolve();
+        }).catch(() => {
+            reject();
+        });
+    });
+    return promise;
+};
+
+function verify(code) {
+    var promise = new Promise((resolve, reject) => {
+        // get a token from the back end
+        fetch('/verify', {
+            method: 'POST',
+            body: JSON.stringify({'code': code})
         }).then(res => res.json()).then(data => {
             // join video call
             Twilio.Video.connect(data.token).then(_room => {
@@ -70,6 +101,7 @@ function updateParticipantCount() {
     else
         count.innerHTML = (room.participants.size + 1) + ' participants online.';
 };
+
 
 function participantConnected(participant) {
     var participant_div = document.createElement('div');
@@ -119,3 +151,4 @@ function disconnect() {
 
 addLocalVideo();
 button.addEventListener('click', connectButtonHandler);
+verifyForm.addEventListener('submit', verifyButtonHandler);
