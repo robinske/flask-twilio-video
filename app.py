@@ -16,13 +16,15 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY')
 
 
-# Hard coded for demo purposes
-# Use your customer DB in production!
-KNOWN_PARTICIPANTS = {
-    'blathers': '+18005559876',
-    'mabel': '+18005554321',
-    'tommy': '+18005556789'
-}
+def get_participant(identity):
+   # Hard coded for demo purposes
+   # Use your customer DB in production!
+   KNOWN_PARTICIPANTS = {
+       'blathers': '+18005559876',
+       'mabel': '+18005554321',
+       'tommy': '+18005556789'
+   }
+   return KNOWN_PARTICIPANTS.get(identity)
 
 
 @app.route('/')
@@ -53,9 +55,9 @@ def login():
         abort(401)
     
     session['username'] = username
-    
-    phone_number = KNOWN_PARTICIPANTS.get(username)
-    session['phone'] = phone_number
+
+    phone_number = get_participant(username)
+
     if not phone_number:
         abort(401)
     
@@ -66,7 +68,8 @@ def login():
 @app.route('/verify', methods=['POST'])
 def verify():
     username = session['username']
-    phone_number = session['phone']
+    phone_number = get_participant(username)
+
     code = request.get_json(force=True).get('code')
     if not check_verification(phone_number, code):
         abort(401)
